@@ -38,7 +38,8 @@ from wificommon import WiFi
 
 
 class HostAP(WiFi):
-    hostapd_control = lambda self, action: "systemctl {} hostapd.service && sleep 2".format(action)
+    hostapd_control = lambda self, action: "systemctl {} hostapd.service && sleep 2".format(
+        action)
 
     def __init__(self, interface,
                  hostapd_config="/etc/hostapd/hostapd.conf",
@@ -59,15 +60,20 @@ class HostAP(WiFi):
     def stop(self):
         self.execute_command(self.hostapd_control("stop"))
 
+    def get_hostap_name(self):
+        return self.re_search("(?<=^ssid=).*", self.hostapd_path)
+
     def set_hostap_name(self, name='reach'):
         mac_addr = self.get_device_mac()[-6:]
         self.replace("^ssid=.*", "ssid={}{}".format(name, mac_addr), self.hostapd_path)
 
-    def get_hostap_name(self):
-        return self.re_search("(?<=^ssid=).*", self.hostapd_path)
-
     def set_hostap_password(self, password):
-        self.replace("^wpa_passphrase=.*", "wpa_passphrase={}".format(password), self.hostapd_path)
+        self.replace("^wpa_passphrase=.*",
+                     "wpa_passphrase={}".format(password), self.hostapd_path)
+        return self.compare_setted_values("(?<=^wpa_passphrase=).*", password)
+
+    def compare_setted_values(self, pattern, value):
+        return self.re_search(pattern, self.hostapd_path) == value
 
     def set_host_name(self, name='reach'):
         try:
