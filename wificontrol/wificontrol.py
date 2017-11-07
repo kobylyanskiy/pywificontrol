@@ -92,17 +92,19 @@ class WiFiControl(object):
         self.hotspot.set_hostap_name(name)
         self.hotspot.set_host_name(name)
         self.wifi.restart_dns()
-        return self.check_setted_names(name)
+        return self.verify_device_names(name)
 
-    def check_setted_names(self, name):
-        get_method_list = [self.hotspot.get_host_name,
-                           self.get_hostap_name,
-                           self.wpasupplicant.get_p2p_name
-                           ]
-        for method in get_method_list:
-            if name not in method():
-                return False
-        return True
+    def verify_hostap_name(self, name):
+        mac_addr = self.hotspot.get_device_mac()[-6:]
+        return "{}{}".format(name, mac_addr) == self.hotspot.get_host_name()
+
+    def verify_device_names(self, name):
+        verified = False
+        if name == self.get_hostap_name():
+            if name == self.wpasupplicant.get_p2p_name():
+                if self.verify_hostap_name(name):
+                    verified = True
+        return verified
 
     def get_status(self):
         state = self.get_state()
