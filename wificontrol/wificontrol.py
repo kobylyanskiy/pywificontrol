@@ -96,11 +96,11 @@ class WiFiControl(object):
 
     def verify_hostap_name(self, name):
         mac_addr = self.hotspot.get_device_mac()[-6:]
-        return "{}{}".format(name, mac_addr) == self.hotspot.get_host_name()
+        return "{}{}".format(name, mac_addr) == self.hotspot.get_hostap_name()
 
     def verify_device_names(self, name):
         verified = False
-        if name == self.get_hostap_name():
+        if name == self.hotspot.get_host_name():
             if name == self.wpasupplicant.get_p2p_name():
                 if self.verify_hostap_name(name):
                     verified = True
