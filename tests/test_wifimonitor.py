@@ -187,3 +187,26 @@ class TestWiFiMonitor:
         self.monitor._wpa_props_changed(wpa_client_state)
         assert self.monitor.current_state == self.monitor.CLIENT_STATE
         stub_func.assert_called_with('revert')
+
+    def test_start_reconnection(self, scanning_state, mocker):
+        stub_func = mocker.stub(name='stub_func')
+
+        self.monitor.register_callback(self.monitor.SCAN_STATE, stub_func, args=('start_reconnection',))
+
+        self.monitor._wpa_props_changed(scanning_state)
+        assert self.monitor.current_state == self.monitor.SCAN_STATE
+        stub_func.assert_called_with('start_reconnection')
+
+    def test_stop_reconnection(self, wpa_client_state, host_mode_state, mocker):
+        stub_func = mocker.stub(name='stub_func')
+
+        self.monitor.register_callback(self.monitor.CLIENT_STATE, stub_func, args=('stop_reconnection',))
+        self.monitor.register_callback(self.monitor.HOST_STATE, stub_func, args=('stop_reconnection',))
+
+        self.monitor._wpa_props_changed(wpa_client_state)
+        assert self.monitor.current_state == self.monitor.CLIENT_STATE
+        stub_func.assert_called_with('stop_reconnection')
+
+        self.monitor._host_props_changed(*host_mode_state)
+        assert self.monitor.current_state == self.monitor.HOST_STATE
+        stub_func.assert_called_with('stop_reconnection')
