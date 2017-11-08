@@ -38,6 +38,10 @@ import pytest_mock
 import mock
 from wificontrol import WiFiMonitor, WiFiControl
 
+from daemon_tree import DaemonTreeObj, DaemonTreeSvr
+from wificontrol import ReconnectWorker
+import threading
+
 
 class FakeWiFiControl(WiFiControl):
     def __init__(self):
@@ -52,6 +56,21 @@ class FakeWiFiControl(WiFiControl):
 
     def set_ssid(self, ssid):
         self.status['ssid'] = ssid
+
+
+class FakeReconnectWorker(ReconnectWorker):
+    def __init__(self):
+        self.manager = mock.MagicMock()
+        self.interrupt = threading.Event()
+        self.worker = None
+
+
+@pytest.fixture
+def valid_network():
+    network = {
+        'ssid': 'TEST_SSID'
+    }
+    return network
 
 
 @pytest.fixture
@@ -210,3 +229,48 @@ class TestWiFiMonitor:
         self.monitor._host_props_changed(*host_mode_state)
         assert self.monitor.current_state == self.monitor.HOST_STATE
         stub_func.assert_called_with('stop_reconnection')
+
+
+def start_reconnection(network):
+    assert network == 'TEST_SSID'
+    return True
+
+
+class TestReconnect:
+    @classmethod
+    def setup_class(cls):
+        cls.reconnect_worker = FakeReconnectWorker()
+        cls.reconnect_svr = DaemonTreeSvr(name='test_reconnect')
+        cls.reconnect_svr.register(start_reconnection)
+        cls.reconnect_svr.register(cls.reconnect_worker.stop_reconnection)
+        cls.worker = threading.Thread(target=cls.reconnect_svr.run)
+        cls.worker.start()
+
+        DaemonTreeObj.RESPONSE_TIMEOUT = 15
+
+        cls.reconnect_obj = DaemonTreeObj('test_reconnect')
+        cls.current_ssid = 'TEST_SSID'
+        cls.reconnect_worker.TIMEOUT = 0.1
+
+    @classmethod
+    def teardown_class(cls):
+        cls.reconnect_worker.stop_reconnection()
+        cls.reconnect_svr.shutdown()
+        cls.worker.join()
+        cls.worker = None
+
+    def test_start_reconnection_call(self):
+        assert self.reconnect_obj.call('start_reconnection', args=(self.current_ssid,)) == True
+
+    def test_stop_reconnection_call(self):
+        self.reconnect_worker.start_reconnection(self.current_ssid)
+
+        self.reconnect_obj.call('stop_reconnection')
+
+        self.reconnect_worker.interrupt.wait(0.5)
+
+        #self.reconnect_worker.manager.scan.assert_called()
+        #self.reconnect_worker.manager.get_scan_results.assert_called()
+
+        assert self.reconnect_worker.interrupt.is_set()
+        assert self.reconnect_worker.worker is None
