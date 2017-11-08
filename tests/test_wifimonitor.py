@@ -66,14 +66,6 @@ class FakeReconnectWorker(ReconnectWorker):
 
 
 @pytest.fixture
-def valid_network():
-    network = {
-        'ssid': 'TEST_SSID'
-    }
-    return network
-
-
-@pytest.fixture
 def scanning_state():
     state = {
         'State': 'scanning'
@@ -231,26 +223,20 @@ class TestWiFiMonitor:
         stub_func.assert_called_with('stop_reconnection')
 
 
-def start_reconnection(network):
-    assert network == 'TEST_SSID'
-    return True
-
-
 class TestReconnect:
     @classmethod
     def setup_class(cls):
         cls.reconnect_worker = FakeReconnectWorker()
+
         cls.reconnect_svr = DaemonTreeSvr(name='test_reconnect')
-        cls.reconnect_svr.register(start_reconnection)
+        cls.reconnect_svr.register(cls.reconnect_worker.start_reconnection)
         cls.reconnect_svr.register(cls.reconnect_worker.stop_reconnection)
+
         cls.worker = threading.Thread(target=cls.reconnect_svr.run)
         cls.worker.start()
 
-        DaemonTreeObj.RESPONSE_TIMEOUT = 15
-
         cls.reconnect_obj = DaemonTreeObj('test_reconnect')
         cls.current_ssid = 'TEST_SSID'
-        cls.reconnect_worker.TIMEOUT = 0.1
 
     @classmethod
     def teardown_class(cls):
@@ -260,17 +246,14 @@ class TestReconnect:
         cls.worker = None
 
     def test_start_reconnection_call(self):
-        assert self.reconnect_obj.call('start_reconnection', args=(self.current_ssid,)) == True
+        self.reconnect_obj.call('start_reconnection', args=(self.current_ssid,))
+        assert self.reconnect_worker.worker is not None
 
     def test_stop_reconnection_call(self):
         self.reconnect_worker.start_reconnection(self.current_ssid)
-
         self.reconnect_obj.call('stop_reconnection')
 
         self.reconnect_worker.interrupt.wait(0.5)
-
-        #self.reconnect_worker.manager.scan.assert_called()
-        #self.reconnect_worker.manager.get_scan_results.assert_called()
 
         assert self.reconnect_worker.interrupt.is_set()
         assert self.reconnect_worker.worker is None
