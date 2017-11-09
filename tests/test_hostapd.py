@@ -70,3 +70,7 @@ class TestHostAP:
     def test_stop_hotspot(self):
         self.hotspot.stop()
         assert self.hotspot.started() is False
+
+    def test_verify_hostap_password(self):
+        wpa_pass = 'somepassword'
+        assert self.hotspot.verify_hostap_password(wpa_pass)
