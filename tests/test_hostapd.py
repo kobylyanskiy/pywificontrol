@@ -37,29 +37,34 @@ import os
 from random import randint
 from wificontrol.hostapd import HostAP
 from tests import edison
+import netifaces
 
 
-@edison
 class TestHostAP:
     @classmethod
     def setup_class(cls):
         cur_path = os.getcwd()
         hostapd_path = cur_path + "/tests/test_files/hostapd.conf"
         hostname_path = cur_path + "/tests/test_files/hostname"
-        cls.hotspot = HostAP('wlan0', hostapd_path, hostname_path)
+
+        for iface in netifaces.interfaces():
+            if 'wl' in iface:
+                interface = iface
+
+        cls.hotspot = HostAP(interface, hostapd_path, hostname_path)
 
     @classmethod
     def teardown_class(cls):
         pass
 
     def test_set_hostap_name(self):
-        new_name = "testname_{}".format(randint(0, 1000))
+        new_name = "testname"
         self.hotspot.set_hostap_name(new_name)
         mac_end = self.hotspot.get_device_mac()[-6:]
         assert self.hotspot.get_hostap_name() == "{}{}".format(new_name, mac_end)
 
     def test_set_host_name(self):
-        new_name = "testname_{}".format(randint(0, 1000))
+        new_name = "testname"
         self.hotspot.set_host_name(new_name)
         assert self.hotspot.get_host_name() == new_name
 
