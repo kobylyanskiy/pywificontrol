@@ -105,11 +105,11 @@ class TestReconnectWorker:
 
     def test_worker_restart(self, valid_network):
         self.reconnect_worker.start_reconnection(valid_network['ssid'])
-        self.reconnect_worker.interrupt.wait(1)
+        self.reconnect_worker.interrupt.wait(2)
         self.reconnect_worker.stop_reconnection()
-        self.reconnect_worker.interrupt.wait(1)
+        self.reconnect_worker.interrupt.wait(2)
         self.reconnect_worker.start_reconnection(valid_network['ssid'])
-        self.reconnect_worker.interrupt.wait(1)
+        self.reconnect_worker.interrupt.wait(2)
         self.reconnect_worker.stop_reconnection()
 
         assert self.reconnect_worker.interrupt.is_set()
