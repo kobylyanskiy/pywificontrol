@@ -34,12 +34,22 @@
 
 
 import os
-from random import randint
 from wificontrol.hostapd import HostAP
-from tests import edison
+import pytest
 import netifaces
 
 
+@pytest.fixture
+def get_interface():
+    interface = None
+    for iface in netifaces.interfaces():
+        if 'wl' in iface:
+            interface = iface
+            return interface
+    return interface
+
+
+@pytest.mark.skipif(not get_interface(), reason="Hostapd is not installed")
 class TestHostAP:
     @classmethod
     def setup_class(cls):
@@ -47,11 +57,7 @@ class TestHostAP:
         hostapd_path = cur_path + "/tests/test_files/hostapd.conf"
         hostname_path = cur_path + "/tests/test_files/hostname"
 
-        for iface in netifaces.interfaces():
-            if 'wl' in iface:
-                interface = iface
-
-        cls.hotspot = HostAP(interface, hostapd_path, hostname_path)
+        cls.hotspot = HostAP(get_interface(), hostapd_path, hostname_path)
 
     @classmethod
     def teardown_class(cls):
